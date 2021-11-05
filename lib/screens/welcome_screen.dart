@@ -1,9 +1,18 @@
 import 'package:basic_needs/providers/auth_provider.dart';
+import 'package:basic_needs/providers/location_provider.dart';
+import 'package:basic_needs/screens/map_screen.dart';
 import 'package:basic_needs/screens/onboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
+  static const String id = 'welcome-screen';
+
+  @override
+  _WelcomeScreenState createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -80,17 +89,25 @@ class WelcomeScreen extends StatelessWidget {
                         absorbing: _validPhoneNumber ? false : true,
                         child: FlatButton(
                           onPressed: () {
+                            myState(() {
+                              auth.loading = true;
+                            });
                             String number = '+91${_phoneNumberController.text}';
                             auth.verifyPhone(context, number).then((value) {
                               _phoneNumberController.clear();
                             });
                           },
-                          child: Text(
-                            _validPhoneNumber
-                                ? 'CONTINUE'
-                                : 'ENTER PHONE NUMBER',
-                            style: TextStyle(color: Colors.white),
-                          ),
+                          child: auth.loading
+                              ? CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                )
+                              : Text(
+                                  _validPhoneNumber
+                                      ? 'CONTINUE'
+                                      : 'ENTER PHONE NUMBER',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                           color: _validPhoneNumber
                               ? Theme.of(context).primaryColor
                               : Colors.grey,
@@ -103,8 +120,15 @@ class WelcomeScreen extends StatelessWidget {
             ),
           );
         }),
-      );
+      ).whenComplete(() {
+        setState(() {
+          auth.loading = false;
+          _phoneNumberController.clear();
+        });
+      });
     }
+
+    final locationData = Provider.of<LocationProvider>(context, listen: false);
 
     return Scaffold(
       body: Padding(
@@ -117,7 +141,7 @@ class WelcomeScreen extends StatelessWidget {
               child: FlatButton(
                 child: Text(
                   'SKIP',
-                  style: TextStyle(color: Colors.deepOrangeAccent),
+                  style: TextStyle(color: Theme.of(context).primaryColor),
                 ),
                 onPressed: () {},
               ),
@@ -133,15 +157,40 @@ class WelcomeScreen extends StatelessWidget {
                   height: 20,
                 ),
                 FlatButton(
-                  onPressed: () {},
-                  child: Text(
-                    'SET DELIVERY LOCATION',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  color: Colors.deepOrangeAccent,
+                  onPressed: () async {
+                    setState(() {
+                      locationData.loading = true;
+                    });
+                    await locationData.getCurrentPosition();
+
+                    if (locationData.permissionAllowed == true) {
+                      Navigator.pushReplacementNamed(context, MapScreen.id);
+                      setState(() {
+                        locationData.loading = false;
+                      });
+                    } else {
+                      print('Permission not allowed');
+                      setState(() {
+                        locationData.loading = false;
+                      });
+                    }
+                  },
+                  child: locationData.loading
+                      ? CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Text(
+                          'SET DELIVERY LOCATION',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                  color: Theme.of(context).primaryColor,
                 ),
                 FlatButton(
                   onPressed: () {
+                    setState(() {
+                      auth.screen = 'Login';
+                    });
                     showBottomSheet(context);
                   },
                   child: RichText(

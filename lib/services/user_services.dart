@@ -1,5 +1,4 @@
 // For all firebase related services for user
-import 'package:basic_needs/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserServices {
@@ -20,13 +19,9 @@ class UserServices {
   }
 
   // Get user data by user id
-  Future<void> getUserById(String id) async {
-    await _firestore.collection(collection).doc(id).get().then((doc) {
-      if (doc.data() == null) {
-        return null;
-      }
+  Future<DocumentSnapshot> getUserById(String id) async {
+    var result = await _firestore.collection(collection).doc(id).get();
 
-      return UserModel.fromSnapshot(doc);
-    });
+    return result;
   }
 }
